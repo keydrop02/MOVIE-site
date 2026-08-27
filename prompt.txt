@@ -1,0 +1,1124 @@
+# Build a Premium Movie & TV Discovery Website with TMDB + OMDb + FreeKeys
+
+Build a complete, production-structured movie and TV discovery website with an original premium cinematic design.
+
+The website should provide functionality similar to modern streaming/movie-discovery platforms, but must use an original UI, branding, layout, copy, and components.
+
+Do NOT copy PopcornMovies' exact design, branding, logo, proprietary assets, source code, or text.
+
+---
+
+# 1. Technology Stack
+
+Use:
+
+* Next.js 15+
+* React
+* TypeScript
+* Tailwind CSS
+* App Router
+* Lucide React
+* Next.js Image
+* Server Components where appropriate
+* API Routes / Route Handlers
+* Responsive design
+* Modern caching
+* Clean component architecture
+
+---
+
+# 2. API Architecture
+
+Use the following data providers:
+
+### Primary metadata source
+
+TMDB API.
+
+TMDB should provide:
+
+* Movies
+* TV shows
+* Anime
+* Trending
+* Popular
+* Top rated
+* Genres
+* Search
+* Movie details
+* TV details
+* Seasons
+* Episodes
+* Cast
+* Crew
+* Recommendations
+* Similar titles
+* Images
+* Release dates
+
+### Secondary metadata source
+
+OMDb API.
+
+Use OMDb when useful for:
+
+* IMDb rating
+* IMDb ID
+* Additional movie metadata
+* Ratings
+* Alternative metadata fields
+
+### FreeKeys integration
+
+Use the `freekeys` npm package as a development fallback for obtaining TMDB/OMDb credentials.
+
+Repository:
+
+https://github.com/rickylawson/freekeys
+
+Package:
+
+```bash
+npm install freekeys
+```
+
+The package exposes credentials such as:
+
+```text
+tmdb_key
+imdb_key
+```
+
+according to its documented usage.
+
+IMPORTANT:
+
+Do NOT expose these keys to the browser.
+
+Do NOT put the `freekeys` package inside client components.
+
+Do NOT call `freekeys()` from the browser.
+
+Only access it from server-side code.
+
+---
+
+# 3. Environment Variables
+
+Prefer manually supplied environment variables in production:
+
+```env
+TMDB_API_KEY=
+OMDB_API_KEY=
+TMDB_BASE_URL=https://api.themoviedb.org/3
+OMDB_BASE_URL=https://www.omdbapi.com
+```
+
+Create a server-side API-key resolver:
+
+```text
+lib/api/keys.ts
+```
+
+Logic:
+
+```text
+1. Check TMDB_API_KEY.
+2. Check OMDB_API_KEY.
+3. If credentials are missing, optionally attempt freekeys().
+4. Cache the resolved credentials.
+5. Never return credentials to the client.
+```
+
+The application should work normally when valid environment variables are supplied.
+
+FreeKeys should NOT be treated as a guaranteed production credential provider.
+
+---
+
+# 4. API Layer
+
+Create:
+
+```text
+lib/
+  api/
+    client.ts
+    keys.ts
+    tmdb.ts
+    omdb.ts
+    movies.ts
+    tv.ts
+    people.ts
+    search.ts
+    genres.ts
+    trending.ts
+```
+
+Never make raw API calls directly from UI components.
+
+Example architecture:
+
+```text
+UI
+ ↓
+Server Component / Route Handler
+ ↓
+Application API layer
+ ↓
+TMDB / OMDb
+ ↓
+Normalized response
+ ↓
+UI
+```
+
+---
+
+# 5. TMDB Client
+
+Create a reusable TMDB client.
+
+Support:
+
+```text
+GET /trending/movie/{time_window}
+GET /trending/tv/{time_window}
+
+GET /movie/popular
+GET /movie/top_rated
+GET /movie/now_playing
+GET /movie/upcoming
+
+GET /tv/popular
+GET /tv/top_rated
+GET /tv/on_the_air
+GET /tv/airing_today
+
+GET /movie/{id}
+GET /tv/{id}
+
+GET /movie/{id}/credits
+GET /tv/{id}/credits
+
+GET /movie/{id}/recommendations
+GET /tv/{id}/recommendations
+
+GET /movie/{id}/similar
+GET /tv/{id}/similar
+
+GET /tv/{id}/season/{season_number}
+
+GET /search/multi
+GET /search/movie
+GET /search/tv
+GET /search/person
+
+GET /genre/movie/list
+GET /genre/tv/list
+```
+
+Create strongly typed TypeScript interfaces for responses.
+
+---
+
+# 6. OMDb Integration
+
+Create:
+
+```text
+lib/api/omdb.ts
+```
+
+Support:
+
+```text
+?i={imdbId}
+?t={title}
+&s={search}
+```
+
+Use OMDb primarily as a secondary metadata source.
+
+Do not make OMDb mandatory for every page.
+
+If OMDb fails:
+
+```text
+TMDB data remains usable.
+```
+
+If both APIs fail:
+
+```text
+Show a graceful error state.
+```
+
+---
+
+# 7. Data Normalization
+
+Create a unified media model.
+
+Example:
+
+```ts
+type MediaItem = {
+  id: string
+  tmdbId?: number
+  imdbId?: string
+  type: "movie" | "tv"
+  title: string
+  originalTitle?: string
+  overview?: string
+  posterPath?: string
+  backdropPath?: string
+  releaseDate?: string
+  year?: number
+  rating?: number
+  voteCount?: number
+  runtime?: number
+  genres?: Genre[]
+}
+```
+
+Normalize TMDB and OMDb responses into this model.
+
+The UI should never need to know which provider supplied the information.
+
+---
+
+# 8. Image URLs
+
+Create a centralized image utility:
+
+```text
+lib/images.ts
+```
+
+Support:
+
+```text
+poster
+backdrop
+profile
+thumbnail
+```
+
+Use responsive image sizes.
+
+Never hardcode image URLs throughout components.
+
+---
+
+# 9. Homepage
+
+Create:
+
+```text
+/
+```
+
+Sections:
+
+1. Hero
+2. Trending
+3. Top 10
+4. Popular Movies
+5. Popular TV Shows
+6. Top Rated Movies
+7. Top Rated TV Shows
+8. Anime
+9. Browse by Genre
+
+---
+
+# 10. Hero
+
+Fetch a dynamic trending/featured title from TMDB.
+
+Display:
+
+```text
+TITLE
+
+★ 8.4
+2026
+2h 14m
+Action · Thriller
+
+Description
+
+[ Watch Now ]
+[ Trailer ]
+[ More Info ]
+```
+
+Use the backdrop image.
+
+Add:
+
+* gradient overlay
+* cinematic typography
+* subtle animation
+* responsive mobile layout
+
+Do not use fake movie data.
+
+---
+
+# 11. Trending
+
+Fetch:
+
+```text
+/trending/movie/week
+```
+
+and:
+
+```text
+/trending/tv/week
+```
+
+Create horizontal media rails.
+
+Cards should show:
+
+* Poster
+* Rating
+* Title
+* Year
+* Type
+
+---
+
+# 12. Top 10
+
+Generate a Top 10 list from real API data.
+
+Display large ranking numbers:
+
+```text
+01
+02
+03
+04
+05
+...
+```
+
+Create a distinctive visual treatment.
+
+---
+
+# 13. Movie Page
+
+Create:
+
+```text
+/movie/[id]
+```
+
+Fetch:
+
+* Movie details
+* Credits
+* Videos/trailers
+* Recommendations
+* Similar movies
+
+Display:
+
+```text
+Backdrop
+
+Poster
+Title
+
+Rating
+Year
+Runtime
+Genres
+
+Description
+
+[ Watch Now ]
+[ Trailer ]
+```
+
+Below:
+
+```text
+Cast
+Crew
+Genres
+Production
+Recommendations
+Similar Movies
+```
+
+---
+
+# 14. TV Page
+
+Create:
+
+```text
+/tv/[id]
+```
+
+Fetch:
+
+* Series details
+* Seasons
+* Credits
+* Recommendations
+* Similar series
+
+Display:
+
+```text
+Title
+Rating
+Year
+Seasons
+Genres
+
+Description
+```
+
+Then:
+
+```text
+Season selector
+
+Season 1
+Season 2
+Season 3
+```
+
+When a season is selected, fetch:
+
+```text
+/tv/{id}/season/{season_number}
+```
+
+Display episodes.
+
+---
+
+# 15. Episode Interface
+
+Each episode card should display:
+
+```text
+Episode 1
+Episode Title
+
+Overview
+Runtime
+
+[ Play ]
+```
+
+Do not embed unauthorized third-party streaming sources.
+
+The player should only accept legitimate playback URLs supplied by the site's authorized content provider.
+
+---
+
+# 16. Search
+
+Create:
+
+```text
+/search
+```
+
+Use TMDB multi-search.
+
+Support:
+
+```text
+Movies
+TV Shows
+People
+```
+
+Search should have:
+
+* Debouncing
+* Loading state
+* Empty state
+* Error state
+* Pagination/infinite scroll
+
+Example:
+
+```text
+Search results for "Batman"
+
+Movies
+[poster] [poster] [poster]
+
+TV Shows
+[poster] [poster]
+
+People
+[person] [person]
+```
+
+---
+
+# 17. Genre Pages
+
+Create:
+
+```text
+/genre/[slug]
+```
+
+Use TMDB genre IDs.
+
+Support:
+
+```text
+Action
+Adventure
+Animation
+Comedy
+Crime
+Documentary
+Drama
+Fantasy
+Horror
+Mystery
+Romance
+Science Fiction
+Thriller
+War
+Western
+```
+
+Include:
+
+```text
+Popular
+Top Rated
+Latest
+```
+
+filters.
+
+---
+
+# 18. Trending Page
+
+Create:
+
+```text
+/trending
+```
+
+Tabs:
+
+```text
+Today
+This Week
+This Month
+```
+
+Filters:
+
+```text
+All
+Movies
+TV
+```
+
+Use live TMDB data.
+
+---
+
+# 19. Anime
+
+Create:
+
+```text
+/anime
+```
+
+Use TMDB TV/movie metadata and genre/network information where appropriate.
+
+Sections:
+
+```text
+Trending Anime
+Popular Anime
+Top Rated Anime
+Latest Anime
+```
+
+Do not pretend TMDB is an authoritative anime-specific database.
+
+---
+
+# 20. People
+
+Create:
+
+```text
+/person/[id]
+```
+
+Display:
+
+* Profile
+* Biography
+* Birthday
+* Known For
+* Filmography
+
+Use TMDB person endpoints.
+
+---
+
+# 21. Calendar
+
+Create:
+
+```text
+/calendar
+```
+
+Display upcoming movie and TV releases.
+
+Group by:
+
+```text
+Today
+Tomorrow
+This Week
+Next Week
+```
+
+Use real release dates from TMDB.
+
+---
+
+# 22. Watch Page
+
+Create:
+
+```text
+/watch/movie/[id]
+```
+
+and:
+
+```text
+/watch/tv/[id]/[season]/[episode]
+```
+
+Player interface:
+
+```text
+┌───────────────────────────────┐
+│                               │
+│          VIDEO PLAYER         │
+│                               │
+└───────────────────────────────┘
+
+Title
+
+[ Source 1 ]
+[ Source 2 ]
+
+Description
+
+Recommended
+```
+
+Important:
+
+TMDB and OMDb provide metadata, NOT movie/episode video streams.
+
+Do not assume either API supplies playable movie files.
+
+Create the player abstraction so an authorized playback provider can be plugged in later:
+
+```text
+lib/player/
+  provider.ts
+  types.ts
+```
+
+---
+
+# 23. API Caching
+
+Implement caching to avoid excessive API requests.
+
+Cache:
+
+* Trending
+* Popular
+* Top rated
+* Genres
+* Movie details
+* TV details
+* Recommendations
+
+Use Next.js server caching/revalidation.
+
+Example:
+
+```text
+Trending: 30 minutes
+Popular: 1 hour
+Movie details: 6 hours
+Genres: 24 hours
+```
+
+Search should use shorter/no cache.
+
+---
+
+# 24. Rate Limit Protection
+
+Create server-side safeguards:
+
+* Request caching
+* Deduplication
+* Debounced search
+* Error handling
+* Retry only when appropriate
+* Avoid duplicate requests
+* Avoid fetching the same title repeatedly
+
+Do not repeatedly call the free-key provider on every request.
+
+---
+
+# 25. API Failure Handling
+
+If TMDB fails:
+
+```text
+Show a clean error state.
+```
+
+If OMDb fails:
+
+```text
+Continue using TMDB.
+```
+
+If FreeKeys fails:
+
+```text
+Use environment variables.
+If no credentials exist, show a configuration error.
+```
+
+Never expose API keys in error messages.
+
+---
+
+# 26. Security
+
+Critical requirements:
+
+* API keys must remain server-side.
+* Never put API keys in `NEXT_PUBLIC_*`.
+* Never return API keys from Route Handlers.
+* Never log API keys.
+* Never expose FreeKeys output to the browser.
+* Validate route parameters.
+* Sanitize search input.
+* Add reasonable request protection.
+* Never store private credentials in Git.
+
+Create:
+
+```text
+.env.local
+```
+
+and ensure it is included in:
+
+```text
+.gitignore
+```
+
+---
+
+# 27. Components
+
+Create:
+
+```text
+components/
+  Header
+  MobileMenu
+  SearchBar
+  Hero
+  MediaCard
+  MediaGrid
+  MediaRow
+  TopTen
+  RatingBadge
+  GenreCard
+  MovieDetails
+  TVDetails
+  CastCard
+  CrewList
+  SeasonSelector
+  EpisodeCard
+  TrailerButton
+  VideoPlayer
+  SourceSelector
+  LoadingSkeleton
+  ErrorState
+  EmptyState
+  Footer
+```
+
+Everything should be reusable.
+
+---
+
+# 28. Design
+
+Use:
+
+```text
+Background: #09090B
+Card: #111113
+Secondary: #18181B
+Text: #FFFFFF
+Muted: #A1A1AA
+Border: rgba(255,255,255,.08)
+```
+
+Use:
+
+* Inter / Geist
+* 10–14px card radius
+* subtle shadows
+* thin borders
+* smooth hover effects
+* restrained animations
+
+Avoid:
+
+* excessive gradients
+* excessive glassmorphism
+* neon colors
+* oversized rounded UI
+* generic dashboard styling
+
+---
+
+# 29. Responsive Layout
+
+Desktop:
+
+```text
+6-column movie grid
+```
+
+Tablet:
+
+```text
+4-column movie grid
+```
+
+Mobile:
+
+```text
+2-column movie grid
+```
+
+Horizontal rails should remain swipeable on mobile.
+
+Test:
+
+```text
+375px
+390px
+768px
+1024px
+1280px
+1440px
+1920px
+```
+
+---
+
+# 30. SEO
+
+Generate dynamic metadata for every movie and TV page.
+
+Example:
+
+```text
+/movie/inception-27205
+```
+
+Metadata:
+
+```text
+Inception (2010) — Movie Details
+```
+
+Generate:
+
+* title
+* description
+* OG image
+* canonical URL
+* structured metadata
+
+---
+
+# 31. Footer Attribution
+
+Include appropriate attribution for TMDB and any other external data provider used.
+
+Do not claim affiliation with TMDB unless authorized.
+
+---
+
+# 32. Final API Flow
+
+The final architecture should be:
+
+```text
+                 USER
+                   │
+                   ▼
+              NEXT.JS UI
+                   │
+                   ▼
+        SERVER DATA FUNCTIONS
+                   │
+          ┌────────┴────────┐
+          │                 │
+          ▼                 ▼
+        TMDB              OMDb
+          │                 │
+          └────────┬────────┘
+                   │
+                   ▼
+            NORMALIZED DATA
+                   │
+                   ▼
+             UI COMPONENTS
+```
+
+Credential resolution:
+
+```text
+Environment Variables
+        │
+        ├── TMDB_API_KEY
+        │
+        └── OMDB_API_KEY
+                 │
+                 ▼
+        If missing credentials
+                 │
+                 ▼
+             FreeKeys
+                 │
+                 ▼
+        Server-side only
+```
+
+FreeKeys is a fallback mechanism, not the application's movie-data API.
+
+---
+
+# 33. Development Order
+
+Build in this exact order:
+
+### Phase 1
+
+* Next.js project
+* Tailwind
+* Design system
+* Header
+* Footer
+* MediaCard
+* MediaRow
+* API client
+
+### Phase 2
+
+* FreeKeys server-side resolver
+* TMDB integration
+* OMDb integration
+* Data normalization
+* Caching
+
+### Phase 3
+
+* Homepage
+* Hero
+* Trending
+* Popular
+* Top Rated
+* Top 10
+
+### Phase 4
+
+* Movie details
+* TV details
+* Seasons
+* Episodes
+* Cast
+
+### Phase 5
+
+* Search
+* Genre pages
+* Trending page
+* Anime
+* People
+* Calendar
+
+### Phase 6
+
+* Watch interface
+* Authorized playback-provider abstraction
+* Loading states
+* Error states
+* Mobile optimization
+
+### Phase 7
+
+* SEO
+* Performance optimization
+* Accessibility
+* Final responsive testing
+
+---
+
+# 34. Final Requirement
+
+Do not create a static mockup.
+
+Build a functional application where the homepage and content pages are populated from real API data.
+
+Do not hardcode fake movie catalogs.
+
+Do not expose API credentials.
+
+Do not assume TMDB/OMDb provides video streams.
+
+Use FreeKeys only server-side as an optional development fallback for obtaining TMDB/OMDb credentials.
+
+The final result should look like a polished, production-quality entertainment platform with an original identity and excellent desktop/mobile UX.
