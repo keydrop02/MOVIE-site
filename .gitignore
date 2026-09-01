@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# superembed local sqlite cache
+/.cache/
+
+# cloudflare worker (se-player-host) local artifacts
+/se-player-host/worker/node_modules/
+/se-player-host/worker/.wrangler/
+/se-player-host/worker/.dev.vars
+

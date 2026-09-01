@@ -1,0 +1,6 @@
+name = "superembed-se-player"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+[observability]
+enabled = true

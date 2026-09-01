@@ -1,1124 +1,2040 @@
-# Build a Premium Movie & TV Discovery Website with TMDB + OMDb + FreeKeys
+BUILD A COMPLETE FULL-STACK MOVIE & TV DISCOVERY PLATFORM
 
-Build a complete, production-structured movie and TV discovery website with an original premium cinematic design.
+Create a production-ready movie and TV discovery/streaming frontend and backend.
 
-The website should provide functionality similar to modern streaming/movie-discovery platforms, but must use an original UI, branding, layout, copy, and components.
+The application should reproduce the supplied reference UI as closely as possible in:
+- layout
+- spacing
+- typography hierarchy
+- navigation
+- colors
+- card proportions
+- page composition
+- filtering
+- content density
+- responsive behavior
+- animations
+- interactions
+- detail-page structure
+- personal-library UX
 
-Do NOT copy PopcornMovies' exact design, branding, logo, proprietary assets, source code, or text.
+Do not use the reference site's branding, logo, name, proprietary assets, text, or identity.
 
----
+Create an original brand identity while preserving the same overall UI/UX structure and visual language.
 
-# 1. Technology Stack
+Use TMDB as the primary metadata/content API.
 
-Use:
+==================================================
+TECH STACK
+==================================================
 
-* Next.js 15+
-* React
-* TypeScript
-* Tailwind CSS
-* App Router
-* Lucide React
-* Next.js Image
-* Server Components where appropriate
-* API Routes / Route Handlers
-* Responsive design
-* Modern caching
-* Clean component architecture
+Frontend:
 
----
+- Next.js
+- React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui where useful
+- Lucide icons
+- next/image where appropriate
+- Server Components where beneficial
+- Client Components only where interaction/state is required
 
-# 2. API Architecture
+Backend:
 
-Use the following data providers:
+- Next.js server-side API routes / route handlers
+- TypeScript
+- TMDB API integration
+- PostgreSQL
+- Prisma ORM
+- Secure authentication/session system
+- Server-side caching
+- Request validation
+- Rate-limit protection
+- Environment-based secrets
 
-### Primary metadata source
+Do not expose the TMDB access token to the browser.
 
-TMDB API.
+Use server-side TMDB requests.
 
-TMDB should provide:
+TMDB API base:
 
-* Movies
-* TV shows
-* Anime
-* Trending
-* Popular
-* Top rated
-* Genres
-* Search
-* Movie details
-* TV details
-* Seasons
-* Episodes
-* Cast
-* Crew
-* Recommendations
-* Similar titles
-* Images
-* Release dates
+https://api.themoviedb.org/3
 
-### Secondary metadata source
+Use the TMDB API Read Access Token through:
 
-OMDb API.
+Authorization: Bearer ${TMDB_ACCESS_TOKEN}
 
-Use OMDb when useful for:
-
-* IMDb rating
-* IMDb ID
-* Additional movie metadata
-* Ratings
-* Alternative metadata fields
-
-### FreeKeys integration
-
-Use the `freekeys` npm package as a development fallback for obtaining TMDB/OMDb credentials.
-
-Repository:
-
-https://github.com/rickylawson/freekeys
-
-Package:
-
-```bash
-npm install freekeys
-```
-
-The package exposes credentials such as:
-
-```text
-tmdb_key
-imdb_key
-```
-
-according to its documented usage.
-
-IMPORTANT:
-
-Do NOT expose these keys to the browser.
-
-Do NOT put the `freekeys` package inside client components.
-
-Do NOT call `freekeys()` from the browser.
-
-Only access it from server-side code.
-
----
-
-# 3. Environment Variables
-
-Prefer manually supplied environment variables in production:
-
-```env
-TMDB_API_KEY=
-OMDB_API_KEY=
-TMDB_BASE_URL=https://api.themoviedb.org/3
-OMDB_BASE_URL=https://www.omdbapi.com
-```
-
-Create a server-side API-key resolver:
-
-```text
-lib/api/keys.ts
-```
-
-Logic:
-
-```text
-1. Check TMDB_API_KEY.
-2. Check OMDB_API_KEY.
-3. If credentials are missing, optionally attempt freekeys().
-4. Cache the resolved credentials.
-5. Never return credentials to the client.
-```
-
-The application should work normally when valid environment variables are supplied.
-
-FreeKeys should NOT be treated as a guaranteed production credential provider.
-
----
-
-# 4. API Layer
-
-Create:
-
-```text
-lib/
-  api/
-    client.ts
-    keys.ts
-    tmdb.ts
-    omdb.ts
-    movies.ts
-    tv.ts
-    people.ts
-    search.ts
-    genres.ts
-    trending.ts
-```
-
-Never make raw API calls directly from UI components.
-
-Example architecture:
-
-```text
-UI
- ↓
-Server Component / Route Handler
- ↓
-Application API layer
- ↓
-TMDB / OMDb
- ↓
-Normalized response
- ↓
-UI
-```
-
----
-
-# 5. TMDB Client
-
-Create a reusable TMDB client.
-
-Support:
-
-```text
-GET /trending/movie/{time_window}
-GET /trending/tv/{time_window}
-
-GET /movie/popular
-GET /movie/top_rated
-GET /movie/now_playing
-GET /movie/upcoming
-
-GET /tv/popular
-GET /tv/top_rated
-GET /tv/on_the_air
-GET /tv/airing_today
-
-GET /movie/{id}
-GET /tv/{id}
-
-GET /movie/{id}/credits
-GET /tv/{id}/credits
-
-GET /movie/{id}/recommendations
-GET /tv/{id}/recommendations
-
-GET /movie/{id}/similar
-GET /tv/{id}/similar
-
-GET /tv/{id}/season/{season_number}
-
-GET /search/multi
-GET /search/movie
-GET /search/tv
-GET /search/person
-
-GET /genre/movie/list
-GET /genre/tv/list
-```
-
-Create strongly typed TypeScript interfaces for responses.
-
----
-
-# 6. OMDb Integration
-
-Create:
-
-```text
-lib/api/omdb.ts
-```
-
-Support:
-
-```text
-?i={imdbId}
-?t={title}
-&s={search}
-```
-
-Use OMDb primarily as a secondary metadata source.
-
-Do not make OMDb mandatory for every page.
-
-If OMDb fails:
-
-```text
-TMDB data remains usable.
-```
-
-If both APIs fail:
-
-```text
-Show a graceful error state.
-```
-
----
-
-# 7. Data Normalization
-
-Create a unified media model.
+Store credentials in environment variables.
 
 Example:
 
-```ts
-type MediaItem = {
-  id: string
-  tmdbId?: number
-  imdbId?: string
-  type: "movie" | "tv"
-  title: string
-  originalTitle?: string
-  overview?: string
-  posterPath?: string
-  backdropPath?: string
-  releaseDate?: string
-  year?: number
-  rating?: number
-  voteCount?: number
-  runtime?: number
-  genres?: Genre[]
-}
-```
+TMDB_ACCESS_TOKEN=
+DATABASE_URL=
+NEXTAUTH_SECRET=
+
+Never hard-code secrets.
+
+==================================================
+CORE ARCHITECTURE
+==================================================
+
+Use this architecture:
+
+/app
+  /(public)
+    /page
+    /movies
+    /tv
+    /search
+    /movie/[id]
+    /tv/[id]
+    /genre/[id]
+    /collection/[id]
+    /provider/[id]
 
-Normalize TMDB and OMDb responses into this model.
+  /(user)
+    /history
+    /lists
+    /lists/[id]
+    /favorites
 
-The UI should never need to know which provider supplied the information.
+  /api
+    /tmdb
+    /search
+    /history
+    /lists
+    /favorites
+    /watch-progress
+    /user
 
----
+/components
+  /layout
+  /navigation
+  /hero
+  /media
+  /rails
+  /filters
+  /search
+  /detail
+  /episodes
+  /cast
+  /library
+  /lists
+  /ui
 
-# 8. Image URLs
+/lib
+  /tmdb
+  /db
+  /auth
+  /cache
+  /validation
+  /utils
 
-Create a centralized image utility:
+/prisma
+  schema.prisma
 
-```text
-lib/images.ts
-```
+Keep API logic, database logic, UI components, and utility functions separated.
 
-Support:
+==================================================
+DESIGN SYSTEM
+==================================================
 
-```text
-poster
-backdrop
-profile
-thumbnail
-```
+Create a dark cinematic design system.
 
-Use responsive image sizes.
+Background:
 
-Never hardcode image URLs throughout components.
+- near-black
+- subtle green/blue undertone
+- never use flat pure black everywhere
 
----
+Suggested colors:
 
-# 9. Homepage
+background:
+#020B07
 
-Create:
+surface:
+#080D0B
 
-```text
-/
-```
+surface elevated:
+#101512
 
-Sections:
+surface hover:
+#151C18
 
-1. Hero
-2. Trending
-3. Top 10
-4. Popular Movies
-5. Popular TV Shows
-6. Top Rated Movies
-7. Top Rated TV Shows
-8. Anime
-9. Browse by Genre
+border:
+rgba(255,255,255,0.08)
 
----
+primary text:
+#F5F5F5
 
-# 10. Hero
+secondary text:
+#A5AAA7
 
-Fetch a dynamic trending/featured title from TMDB.
+muted text:
+#6F7672
 
-Display:
+accent:
+use one restrained lime/green accent for selected controls and important interactive states
 
-```text
-TITLE
+Do not overuse the accent.
 
-★ 8.4
-2026
-2h 14m
-Action · Thriller
+Typography:
 
-Description
+Use a modern clean sans-serif.
 
-[ Watch Now ]
-[ Trailer ]
-[ More Info ]
-```
+Large editorial headings should be bold.
 
-Use the backdrop image.
+Hero titles:
+very large and heavy.
 
-Add:
+Page titles:
+large and bold.
 
-* gradient overlay
-* cinematic typography
-* subtle animation
-* responsive mobile layout
+Section headings:
+medium/bold.
 
-Do not use fake movie data.
+Metadata:
+small and muted.
 
----
+Do not use excessive font weights.
 
-# 11. Trending
+==================================================
+GLOBAL PAGE WIDTH
+==================================================
 
-Fetch:
+Desktop content should use a large centered max-width container.
 
-```text
-/trending/movie/week
-```
+Approximate:
 
-and:
+max-width:
+1400–1500px
 
-```text
-/trending/tv/week
-```
+Horizontal padding:
+desktop: 40–56px
+tablet: 28–36px
+mobile: 16–20px
 
-Create horizontal media rails.
+The navigation can extend independently from the main content.
 
-Cards should show:
+Do not make the content excessively narrow.
 
-* Poster
-* Rating
-* Title
-* Year
-* Type
+==================================================
+GLOBAL NAVIGATION
+==================================================
 
----
-
-# 12. Top 10
-
-Generate a Top 10 list from real API data.
-
-Display large ranking numbers:
-
-```text
-01
-02
-03
-04
-05
-...
-```
-
-Create a distinctive visual treatment.
-
----
-
-# 13. Movie Page
-
-Create:
-
-```text
-/movie/[id]
-```
-
-Fetch:
-
-* Movie details
-* Credits
-* Videos/trailers
-* Recommendations
-* Similar movies
-
-Display:
-
-```text
-Backdrop
-
-Poster
-Title
-
-Rating
-Year
-Runtime
-Genres
-
-Description
-
-[ Watch Now ]
-[ Trailer ]
-```
-
-Below:
-
-```text
-Cast
-Crew
-Genres
-Production
-Recommendations
-Similar Movies
-```
-
----
-
-# 14. TV Page
-
-Create:
-
-```text
-/tv/[id]
-```
-
-Fetch:
-
-* Series details
-* Seasons
-* Credits
-* Recommendations
-* Similar series
-
-Display:
-
-```text
-Title
-Rating
-Year
-Seasons
-Genres
-
-Description
-```
-
-Then:
-
-```text
-Season selector
-
-Season 1
-Season 2
-Season 3
-```
-
-When a season is selected, fetch:
-
-```text
-/tv/{id}/season/{season_number}
-```
-
-Display episodes.
-
----
-
-# 15. Episode Interface
-
-Each episode card should display:
-
-```text
-Episode 1
-Episode Title
-
-Overview
-Runtime
-
-[ Play ]
-```
-
-Do not embed unauthorized third-party streaming sources.
-
-The player should only accept legitimate playback URLs supplied by the site's authorized content provider.
-
----
-
-# 16. Search
-
-Create:
-
-```text
-/search
-```
-
-Use TMDB multi-search.
-
-Support:
-
-```text
-Movies
-TV Shows
-People
-```
-
-Search should have:
-
-* Debouncing
-* Loading state
-* Empty state
-* Error state
-* Pagination/infinite scroll
-
-Example:
-
-```text
-Search results for "Batman"
-
-Movies
-[poster] [poster] [poster]
-
-TV Shows
-[poster] [poster]
-
-People
-[person] [person]
-```
-
----
-
-# 17. Genre Pages
-
-Create:
-
-```text
-/genre/[slug]
-```
-
-Use TMDB genre IDs.
-
-Support:
-
-```text
-Action
-Adventure
-Animation
-Comedy
-Crime
-Documentary
-Drama
-Fantasy
-Horror
-Mystery
-Romance
-Science Fiction
-Thriller
-War
-Western
-```
-
-Include:
-
-```text
-Popular
-Top Rated
-Latest
-```
-
-filters.
-
----
-
-# 18. Trending Page
-
-Create:
-
-```text
-/trending
-```
-
-Tabs:
-
-```text
-Today
-This Week
-This Month
-```
-
-Filters:
-
-```text
-All
-Movies
-TV
-```
-
-Use live TMDB data.
-
----
-
-# 19. Anime
-
-Create:
-
-```text
-/anime
-```
-
-Use TMDB TV/movie metadata and genre/network information where appropriate.
-
-Sections:
-
-```text
-Trending Anime
-Popular Anime
-Top Rated Anime
-Latest Anime
-```
-
-Do not pretend TMDB is an authoritative anime-specific database.
-
----
-
-# 20. People
-
-Create:
-
-```text
-/person/[id]
-```
-
-Display:
-
-* Profile
-* Biography
-* Birthday
-* Known For
-* Filmography
-
-Use TMDB person endpoints.
-
----
-
-# 21. Calendar
-
-Create:
-
-```text
-/calendar
-```
-
-Display upcoming movie and TV releases.
-
-Group by:
-
-```text
-Today
-Tomorrow
-This Week
-Next Week
-```
-
-Use real release dates from TMDB.
-
----
-
-# 22. Watch Page
-
-Create:
-
-```text
-/watch/movie/[id]
-```
-
-and:
-
-```text
-/watch/tv/[id]/[season]/[episode]
-```
-
-Player interface:
-
-```text
-┌───────────────────────────────┐
-│                               │
-│          VIDEO PLAYER         │
-│                               │
-└───────────────────────────────┘
-
-Title
-
-[ Source 1 ]
-[ Source 2 ]
-
-Description
-
-Recommended
-```
-
-Important:
-
-TMDB and OMDb provide metadata, NOT movie/episode video streams.
-
-Do not assume either API supplies playable movie files.
-
-Create the player abstraction so an authorized playback provider can be plugged in later:
-
-```text
-lib/player/
-  provider.ts
-  types.ts
-```
-
----
-
-# 23. API Caching
-
-Implement caching to avoid excessive API requests.
-
-Cache:
-
-* Trending
-* Popular
-* Top rated
-* Genres
-* Movie details
-* TV details
-* Recommendations
-
-Use Next.js server caching/revalidation.
-
-Example:
-
-```text
-Trending: 30 minutes
-Popular: 1 hour
-Movie details: 6 hours
-Genres: 24 hours
-```
-
-Search should use shorter/no cache.
-
----
-
-# 24. Rate Limit Protection
-
-Create server-side safeguards:
-
-* Request caching
-* Deduplication
-* Debounced search
-* Error handling
-* Retry only when appropriate
-* Avoid duplicate requests
-* Avoid fetching the same title repeatedly
-
-Do not repeatedly call the free-key provider on every request.
-
----
-
-# 25. API Failure Handling
-
-If TMDB fails:
-
-```text
-Show a clean error state.
-```
-
-If OMDb fails:
-
-```text
-Continue using TMDB.
-```
-
-If FreeKeys fails:
-
-```text
-Use environment variables.
-If no credentials exist, show a configuration error.
-```
-
-Never expose API keys in error messages.
-
----
-
-# 26. Security
-
-Critical requirements:
-
-* API keys must remain server-side.
-* Never put API keys in `NEXT_PUBLIC_*`.
-* Never return API keys from Route Handlers.
-* Never log API keys.
-* Never expose FreeKeys output to the browser.
-* Validate route parameters.
-* Sanitize search input.
-* Add reasonable request protection.
-* Never store private credentials in Git.
-
-Create:
-
-```text
-.env.local
-```
-
-and ensure it is included in:
-
-```text
-.gitignore
-```
-
----
-
-# 27. Components
-
-Create:
-
-```text
-components/
-  Header
-  MobileMenu
-  SearchBar
-  Hero
-  MediaCard
-  MediaGrid
-  MediaRow
-  TopTen
-  RatingBadge
-  GenreCard
-  MovieDetails
-  TVDetails
-  CastCard
-  CrewList
-  SeasonSelector
-  EpisodeCard
-  TrailerButton
-  VideoPlayer
-  SourceSelector
-  LoadingSkeleton
-  ErrorState
-  EmptyState
-  Footer
-```
-
-Everything should be reusable.
-
----
-
-# 28. Design
-
-Use:
-
-```text
-Background: #09090B
-Card: #111113
-Secondary: #18181B
-Text: #FFFFFF
-Muted: #A1A1AA
-Border: rgba(255,255,255,.08)
-```
-
-Use:
-
-* Inter / Geist
-* 10–14px card radius
-* subtle shadows
-* thin borders
-* smooth hover effects
-* restrained animations
-
-Avoid:
-
-* excessive gradients
-* excessive glassmorphism
-* neon colors
-* oversized rounded UI
-* generic dashboard styling
-
----
-
-# 29. Responsive Layout
+Create a floating pill-shaped navigation.
 
 Desktop:
 
-```text
-6-column movie grid
-```
+LEFT:
+brand/logo
 
-Tablet:
+RIGHT:
 
-```text
-4-column movie grid
-```
+[ Home ]
+[ Movies ]
+[ Shows ]
+[ My List ]
+|
+[ Search icon ]
+[ Settings icon ]
+
+The navigation container should be:
+
+- rounded-full
+- dark
+- slightly translucent
+- thin border
+- subtle backdrop blur
+- compact
+- fixed/sticky near the top
+
+Active item:
+
+- light/contrasting pill
+- dark text
+- clearly selected
+
+Inactive:
+
+- muted light text
+
+Navigation must remain readable over hero images.
+
+On detail pages, overlay navigation over the hero.
+
+On normal pages, maintain the same floating navigation style.
 
 Mobile:
 
-```text
-2-column movie grid
-```
+Use a compact navigation.
 
-Horizontal rails should remain swipeable on mobile.
+Do not let navigation overflow horizontally.
 
-Test:
+==================================================
+BACK BUTTON
+==================================================
 
-```text
-375px
-390px
-768px
-1024px
-1280px
-1440px
-1920px
-```
+Detail/library pages should have a back button/logo area.
 
----
+Place it independently from the navigation.
 
-# 30. SEO
+Desktop:
 
-Generate dynamic metadata for every movie and TV page.
+← logo
+
+Mobile:
+
+← logo/icon
+
+Use a clean icon-only button where appropriate.
+
+==================================================
+HOME PAGE
+==================================================
+
+The homepage should be editorial, cinematic, and content-heavy.
+
+Order:
+
+1. Hero
+2. Provider rail
+3. Trending Movies
+4. Trending Series
+5. Provider-specific sections
+6. Award-winning sections
+7. Top Rated Movies
+8. Top Rated TV
+9. Curated/thematic sections
+10. Footer
+
+Do not make every section identical.
+
+==================================================
+HOME HERO
+==================================================
+
+Create a large cinematic hero.
+
+Desktop:
+approximately 60–70vh
+
+Tablet:
+approximately 52–60vh
+
+Mobile:
+approximately 48–55vh
+
+Structure:
+
+FULL BACKDROP IMAGE
+
++
+multiple gradient layers
+
++
+content positioned left/bottom
+
+Content:
+
+Title
+
+Rating · Year · Runtime · Genres
+
+Description
+
+[ Play ]
+[ More Info ]
+
+Optional:
+
+carousel indicators
+previous/next
+autoplay
+pause
+
+Hero backdrop:
+
+Use TMDB backdrop_path.
+
+Prefer high-resolution backdrop assets.
+
+Use image positioning intelligently.
+
+Use:
+
+background-position:
+center
+
+But dynamically adjust based on image.
+
+Overlay:
+
+Top:
+transparent
+
+Middle:
+subtle dark gradient
+
+Bottom:
+strong fade into page background
+
+Left:
+dark gradient behind text
+
+Do not use a simple black overlay.
+
+Hero must blend naturally into the page.
+
+==================================================
+PROVIDER RAIL
+==================================================
+
+Under the hero:
+
+"Browse by Provider"
+
+Horizontal provider cards.
+
+Use TMDB provider/network data when available.
+
+Each provider:
+
+logo
+name
+
+Card:
+
+small
+dark
+rounded
+subtle border
+
+Desktop:
+many providers visible
+
+Mobile:
+horizontal scrolling
+
+==================================================
+MEDIA RAIL SYSTEM
+==================================================
+
+Create one reusable MediaRail component.
+
+Structure:
+
+Section title                              View all →
+
+Cards → → → → → → → →
+
+Desktop:
+6–7 cards visible
+
+Tablet:
+4–5
+
+Mobile:
+2–3
+
+Features:
+
+- horizontal scroll
+- snap scrolling
+- hidden scrollbar
+- previous/next buttons
+- keyboard accessibility
+- touch scrolling
+- no page-level horizontal overflow
+
+Desktop arrows should appear near the section heading or rail edge.
+
+Hide arrows when unnecessary.
+
+==================================================
+MEDIA CARD
+==================================================
+
+Poster ratio:
+
+2:3
+
+Card includes:
+
+poster
+rating badge
+title
+year
+media type / genre
+
+Optional:
+
+watch progress
+favorite indicator
+watched indicator
+
+Rating badge:
+
+small
+top-left
+dark translucent background
+
+Do not overcrowd cards.
+
+Hover desktop:
+
+- slight scale
+- slight elevation
+- higher z-index
+- subtle shadow
+- optional action overlay
+
+Do not make cards jump the layout.
+
+Mobile:
+disable aggressive hover effects.
+
+==================================================
+TRENDING MOVIES
+==================================================
+
+Use TMDB:
+
+/trending/movie/day
+
+or
+
+/trending/movie/week
+
+depending on configuration.
+
+Create:
+
+Trending Movies
+
+Use MediaRail.
+
+==================================================
+TRENDING SERIES
+==================================================
+
+Use:
+
+/trending/tv/day
+
+or
+
+/trending/tv/week
+
+Create:
+
+Trending Series
+
+Use MediaRail.
+
+==================================================
+POPULAR CONTENT
+==================================================
+
+Movies:
+
+/movie/popular
+
+TV:
+
+/tv/popular
+
+Keep them in separate rows.
+
+Never combine movies and TV in the same standard rail.
+
+==================================================
+TOP RATED
+==================================================
+
+Movies:
+
+/movie/top_rated
+
+TV:
+
+/tv/top_rated
+
+Display:
+
+Top Rated Movies
+
+Top Rated TV Shows
+
+Separate rails.
+
+==================================================
+DISCOVER
+==================================================
+
+Implement TMDB discover endpoints.
+
+Movies:
+
+/discover/movie
+
+TV:
+
+/discover/tv
+
+Support:
+
+genre
+year
+sort
+rating
+vote count
+language
+country
+provider
+
+Map UI filters to TMDB query parameters.
+
+==================================================
+GENRE SYSTEM
+==================================================
+
+Load TMDB genre configuration.
+
+Movie genres:
+
+/genre/movie/list
+
+TV genres:
+
+/genre/tv/list
+
+Create genre pages.
 
 Example:
 
-```text
-/movie/inception-27205
-```
+/genre/28
+
+Page:
+
+Genre title
+
+Description
+
+Filters
+
+Movie/TV grid
+
+==================================================
+PROVIDER SYSTEM
+==================================================
+
+Use TMDB watch provider endpoints where appropriate.
+
+Allow provider filtering.
+
+Examples:
+
+Netflix
+Prime Video
+Disney+
+Hulu
+Max
+Apple TV+
+Paramount+
+
+Do not hard-code provider IDs.
+
+Fetch provider configuration dynamically.
+
+==================================================
+MOVIES PAGE
+==================================================
+
+Layout:
+
+Floating navigation
+
+Page title:
+
+Movies
+
+Subtitle:
+
+Discover movies to watch
+
+Filter bar
+
+Movie grid
+
+Infinite pagination / load more
+
+Footer
+
+==================================================
+MOVIE FILTERS
+==================================================
+
+Create pill-shaped filter controls:
+
+[ Genre ]
+[ Year ]
+[ Rating ]
+[ Popularity ]
+[ Provider ]
+[ Country ]
+[ Language ]
+[ Sort ]
+
+Each opens a compact dropdown/popover.
+
+Selected filters should visually stand out.
+
+Mobile:
+
+horizontal filter scrolling.
+
+==================================================
+MOVIE GRID
+==================================================
+
+Responsive:
+
+Desktop:
+6–8 columns
+
+Tablet:
+4–6
+
+Mobile:
+2–3
+
+Use consistent poster dimensions.
+
+Avoid masonry.
+
+Use CSS grid.
+
+Cards must align perfectly.
+
+==================================================
+TV PAGE
+==================================================
+
+Same architecture as Movies.
+
+Title:
+
+TV Series
+
+Subtitle:
+
+Discover new TV series to watch
+
+Filters:
+
+Genre
+Year
+Rating
+Popularity
+Provider
+Country
+Language
+Sort
+
+Grid:
+
+6–8 desktop
+4–6 tablet
+2–3 mobile
+
+==================================================
+SEARCH PAGE
+==================================================
+
+Initial state should feel like a discovery screen.
+
+Large centered heading:
+
+Let's find something to watch
+
+Large rounded search field:
+
+Search movies & TV shows...
+
+Below:
+
+Trending Today
+
+Display attractive discovery content.
+
+When searching:
+
+Search results for:
+
+"QUERY"
+
+Tabs:
+
+All
+Movies
+TV Shows
+
+Then responsive result grid.
+
+==================================================
+SEARCH API
+==================================================
+
+Use:
+
+/search/multi
+
+Support:
+
+movie
+tv
+person
+
+Do not show people in standard media results unless intended.
+
+Debounce search requests.
+
+Implement:
+
+- autocomplete
+- loading state
+- no-result state
+- error state
+- pagination
+
+Use server-side search endpoint.
+
+==================================================
+MOVIE DETAIL PAGE
+==================================================
+
+Route:
+
+/movie/[id]
+
+Top:
+
+cinematic backdrop hero
+
+Content:
+
+Title
+
+Genres
+
+[ Play ]
+
+[ Add to List ]
+
+[ Favorite ]
+
+[ Secondary action ]
 
 Metadata:
 
-```text
-Inception (2010) — Movie Details
-```
+Year
+Runtime
+Certification
+Rating
 
-Generate:
+Director
 
-* title
-* description
-* OG image
-* canonical URL
-* structured metadata
+Description
 
----
+Read More
 
-# 31. Footer Attribution
+Ratings
 
-Include appropriate attribution for TMDB and any other external data provider used.
+IMDb-style rating
+TMDB rating
+critic/audience data only when actually available
 
-Do not claim affiliation with TMDB unless authorized.
+Do not fabricate ratings.
 
----
+==================================================
+MOVIE DETAIL SIDEBAR
+==================================================
 
-# 32. Final API Flow
+Desktop:
 
-The final architecture should be:
+Right-side information panel.
 
-```text
-                 USER
-                   │
-                   ▼
-              NEXT.JS UI
-                   │
-                   ▼
-        SERVER DATA FUNCTIONS
-                   │
-          ┌────────┴────────┐
-          │                 │
-          ▼                 ▼
-        TMDB              OMDb
-          │                 │
-          └────────┬────────┘
-                   │
-                   ▼
-            NORMALIZED DATA
-                   │
-                   ▼
-             UI COMPONENTS
-```
+Rows:
 
-Credential resolution:
+Runtime
+Language
+Release date
+Budget
+Revenue
+Status
+Production companies
 
-```text
-Environment Variables
-        │
-        ├── TMDB_API_KEY
-        │
-        └── OMDB_API_KEY
-                 │
-                 ▼
-        If missing credentials
-                 │
-                 ▼
-             FreeKeys
-                 │
-                 ▼
-        Server-side only
-```
+Panel should be compact.
 
-FreeKeys is a fallback mechanism, not the application's movie-data API.
+Mobile:
 
----
+Move information below primary content.
 
-# 33. Development Order
+==================================================
+MOVIE CAST
+==================================================
 
-Build in this exact order:
+Use:
 
-### Phase 1
+/movie/{id}/credits
 
-* Next.js project
-* Tailwind
-* Design system
-* Header
-* Footer
-* MediaCard
-* MediaRow
-* API client
+Display horizontal cast rail.
 
-### Phase 2
+Circular portraits.
 
-* FreeKeys server-side resolver
-* TMDB integration
-* OMDb integration
-* Data normalization
-* Caching
+Each:
 
-### Phase 3
+actor image
+actor name
+character
 
-* Homepage
-* Hero
-* Trending
-* Popular
-* Top Rated
-* Top 10
+Do not use rectangular poster cards here.
 
-### Phase 4
+==================================================
+MOVIE TRAILERS
+==================================================
 
-* Movie details
-* TV details
-* Seasons
-* Episodes
-* Cast
+Use:
 
-### Phase 5
+/movie/{id}/videos
 
-* Search
-* Genre pages
-* Trending page
-* Anime
-* People
-* Calendar
+Only show actual trailer/video data.
 
-### Phase 6
+Landscape cards.
 
-* Watch interface
-* Authorized playback-provider abstraction
-* Loading states
-* Error states
-* Mobile optimization
+Each:
 
-### Phase 7
+thumbnail
+play icon
+title
+type
 
-* SEO
-* Performance optimization
-* Accessibility
-* Final responsive testing
+Prefer YouTube trailer URLs where available.
 
----
+==================================================
+MOVIE RECOMMENDATIONS
+==================================================
 
-# 34. Final Requirement
+Use:
 
-Do not create a static mockup.
+/movie/{id}/recommendations
 
-Build a functional application where the homepage and content pages are populated from real API data.
+Fallback:
 
-Do not hardcode fake movie catalogs.
+/movie/{id}/similar
 
-Do not expose API credentials.
+Section:
 
-Do not assume TMDB/OMDb provides video streams.
+You Might Also Like
 
-Use FreeKeys only server-side as an optional development fallback for obtaining TMDB/OMDb credentials.
+Horizontal poster rail.
 
-The final result should look like a polished, production-quality entertainment platform with an original identity and excellent desktop/mobile UX.
+==================================================
+TV DETAIL PAGE
+==================================================
+
+Route:
+
+/tv/[id]
+
+Use cinematic backdrop.
+
+Content:
+
+Title
+Genres
+Play
+Add to List
+Favorite
+Year
+Rating
+Creator
+Description
+
+Side panel:
+
+Status
+Language
+First aired
+Last aired
+Seasons
+Episodes
+Networks
+
+==================================================
+TV EPISODES
+==================================================
+
+Fetch seasons and episodes from TMDB.
+
+Structure:
+
+Episodes
+
+Controls:
+
+[ Ratings ]
+[ Oldest ]
+[ Newest ]
+[ Mark watched ]
+[ Season 1 ]
+
+Episode cards should be landscape.
+
+Each:
+
+thumbnail
+
+Episode number
+
+Runtime
+
+Watched indicator
+
+Title
+
+Description
+
+Use:
+
+/tv/{id}/season/{season_number}
+
+==================================================
+TV CAST
+==================================================
+
+Use TV credits.
+
+Circular actor cards.
+
+==================================================
+TV TRAILERS / VIDEOS
+==================================================
+
+Use:
+
+/tv/{id}/videos
+
+Show available trailers and clips where appropriate.
+
+==================================================
+TV RECOMMENDATIONS
+==================================================
+
+Use:
+
+/tv/{id}/recommendations
+
+Fallback:
+
+/tv/{id}/similar
+
+==================================================
+WATCH HISTORY
+==================================================
+
+Create a persistent user watch-history system.
+
+Database stores:
+
+userId
+mediaType
+tmdbId
+title
+posterPath
+progress
+duration
+lastWatchedAt
+completed
+
+History page:
+
+Watch History
+
+Edit/Clear
+
+Poster grid.
+
+Each card can show:
+
+progress bar
+
+last watched information
+
+completion state
+
+Empty state:
+
+No watch history yet
+
+Start watching something to see it here.
+
+==================================================
+WATCH PROGRESS
+==================================================
+
+Create API:
+
+POST /api/watch-progress
+
+Fields:
+
+tmdbId
+mediaType
+progress
+duration
+
+Update existing record instead of duplicating.
+
+Automatically mark completed when progress exceeds a configurable threshold.
+
+Example:
+
+progress / duration >= 0.90
+
+Store timestamps.
+
+==================================================
+MY LISTS
+==================================================
+
+Users can create custom lists.
+
+Database:
+
+List
+- id
+- userId
+- name
+- description
+- createdAt
+- updatedAt
+
+ListItem:
+- id
+- listId
+- tmdbId
+- mediaType
+- position
+- createdAt
+
+Page:
+
+My Lists
+
+[ + New List ]
+
+Empty:
+
+No lists yet
+
+Create a list to start organizing your movies and shows.
+
+==================================================
+CREATE LIST UI
+==================================================
+
+Do not use a giant modal.
+
+Use an inline creation bar:
+
+[ List name... ] [ Create ]
+
+Include cancel/close.
+
+Validate:
+
+- non-empty
+- reasonable maximum length
+- duplicate handling
+
+==================================================
+LIST DETAIL
+==================================================
+
+Route:
+
+/lists/[id]
+
+Display:
+
+List title
+description
+item count
+
+[ Edit ]
+[ Delete ]
+
+Poster grid.
+
+Actions:
+
+remove
+reorder
+open detail
+
+==================================================
+FAVORITES
+==================================================
+
+Allow users to favorite content.
+
+Database:
+
+Favorite
+- userId
+- tmdbId
+- mediaType
+- createdAt
+
+Unique:
+
+userId + tmdbId + mediaType
+
+Use optimistic UI.
+
+==================================================
+AUTHENTICATION
+==================================================
+
+Implement secure authentication.
+
+Support:
+
+email/password
+
+Optionally OAuth providers.
+
+Password:
+
+- hash securely
+- never store plaintext
+
+Sessions:
+
+secure HTTP-only cookies
+
+Do not store sensitive authentication tokens in localStorage.
+
+Protect:
+
+history
+lists
+favorites
+watch progress
+
+Public:
+
+home
+movies
+TV
+search
+detail pages
+
+==================================================
+DATABASE
+==================================================
+
+Use PostgreSQL + Prisma.
+
+Models:
+
+User
+Session
+Account
+WatchHistory
+WatchProgress
+Favorite
+List
+ListItem
+
+Use indexes on:
+
+userId
+tmdbId
+mediaType
+lastWatchedAt
+createdAt
+
+Prevent duplicate records.
+
+==================================================
+TMDB SERVICE
+==================================================
+
+Create:
+
+lib/tmdb/client.ts
+
+Centralize all TMDB requests.
+
+Create typed methods:
+
+getTrendingMovies()
+getTrendingTV()
+getPopularMovies()
+getPopularTV()
+getTopRatedMovies()
+getTopRatedTV()
+discoverMovies()
+discoverTV()
+searchMulti()
+getMovie()
+getMovieCredits()
+getMovieVideos()
+getMovieRecommendations()
+getMovieSimilar()
+getTV()
+getTVCredits()
+getTVVideos()
+getTVRecommendations()
+getTVSimilar()
+getTVSeason()
+getGenres()
+getProviders()
+
+Do not scatter raw fetch calls throughout React components.
+
+==================================================
+TMDB IMAGE HANDLING
+==================================================
+
+Use TMDB image paths.
+
+Poster:
+
+w342 / w500 depending on display size.
+
+Backdrop:
+
+w1280 or original where necessary.
+
+Profile:
+
+w185 / w342.
+
+Do not request original-size images unnecessarily.
+
+Create image helper:
+
+getTmdbImage(path, size)
+
+Handle:
+
+null
+missing
+invalid paths
+
+Use appropriate fallbacks.
+
+==================================================
+TMDB CACHING
+==================================================
+
+Cache server-side TMDB responses.
+
+Different cache periods:
+
+Trending:
+short cache
+
+Popular:
+medium cache
+
+Top rated:
+longer cache
+
+Genres/providers:
+long cache
+
+Details:
+medium cache
+
+Do not cache user-specific data globally.
+
+Respect TMDB's API requirements and caching restrictions.
+
+==================================================
+API ROUTES
+==================================================
+
+Create:
+
+GET /api/search
+
+GET /api/movies
+
+GET /api/tv
+
+GET /api/trending
+
+GET /api/movie/[id]
+
+GET /api/tv/[id]
+
+GET /api/movie/[id]/credits
+
+GET /api/movie/[id]/videos
+
+GET /api/movie/[id]/recommendations
+
+GET /api/tv/[id]/season/[season]
+
+GET /api/history
+
+POST /api/history
+
+DELETE /api/history
+
+GET /api/lists
+
+POST /api/lists
+
+PATCH /api/lists/[id]
+
+DELETE /api/lists/[id]
+
+POST /api/lists/[id]/items
+
+DELETE /api/lists/[id]/items/[itemId]
+
+GET /api/favorites
+
+POST /api/favorites
+
+DELETE /api/favorites/[tmdbId]
+
+GET /api/watch-progress
+
+POST /api/watch-progress
+
+==================================================
+API SECURITY
+==================================================
+
+Validate all API inputs.
+
+Use Zod or equivalent.
+
+Never trust client-supplied:
+
+userId
+permissions
+ownership
+
+Always derive user identity from authenticated session.
+
+Verify list ownership before modification.
+
+Verify history ownership before deletion.
+
+Rate-limit expensive endpoints.
+
+Do not expose TMDB credentials.
+
+==================================================
+ERROR HANDLING
+==================================================
+
+Every data-dependent component must have:
+
+loading
+success
+empty
+error
+
+States.
+
+Example:
+
+Something went wrong
+
+We couldn't load this content.
+
+[ Try Again ]
+
+Never show raw API errors to users.
+
+==================================================
+SKELETON LOADING
+==================================================
+
+Skeletons must exactly match final layouts.
+
+Hero:
+large cinematic skeleton
+
+Rail:
+poster skeletons
+
+Grid:
+same card dimensions
+
+Detail:
+metadata skeleton
+
+Episodes:
+landscape skeleton
+
+Cast:
+circular skeleton
+
+Prevent layout shifts.
+
+==================================================
+EMPTY STATES
+==================================================
+
+Create consistent empty states for:
+
+Search
+History
+Lists
+Favorites
+Genre
+Provider
+Recommendations
+
+Use:
+
+icon
+heading
+short explanation
+optional CTA
+
+==================================================
+FOOTER
+==================================================
+
+Minimal footer.
+
+Centered.
+
+Brand/logo
+
+Community/social icon
+
+Small legal/disclaimer text
+
+Contact
+
+Optional navigation
+
+Also include required TMDB attribution in an About/Credits area using the required wording and approved branding where applicable.
+
+==================================================
+RESPONSIVE DESIGN
+==================================================
+
+Desktop:
+
+- floating navigation
+- large hero
+- wide content container
+- 6–8 poster grid columns
+- 6–7 rail cards
+- side detail information
+
+Tablet:
+
+- reduced hero
+- 4–6 grid columns
+- 4–5 rail cards
+- reduced spacing
+
+Mobile:
+
+- compact navigation
+- 2–3 grid columns
+- 2–3 rail cards visible
+- horizontal scrolling
+- stacked detail page
+- filters horizontally scroll
+- no side panels
+- no horizontal page overflow
+
+==================================================
+MOBILE NAVIGATION
+==================================================
+
+Mobile should not simply shrink desktop navigation.
+
+Create a deliberate mobile layout.
+
+Possible:
+
+logo
+
+[ Home ]
+[ Movies ]
+[ Shows ]
+[ My List ]
+[ Search ]
+
+Use compact icons where necessary.
+
+==================================================
+ANIMATIONS
+==================================================
+
+Use restrained motion.
+
+Card hover:
+
+150–250ms
+
+Navigation active:
+
+150–200ms
+
+Dropdown:
+
+150–200ms
+
+Page transitions:
+
+subtle fade
+
+Hero:
+
+slow background transition
+
+Respect:
+
+prefers-reduced-motion
+
+Never animate essential content excessively.
+
+==================================================
+ACCESSIBILITY
+==================================================
+
+Implement:
+
+semantic HTML
+ARIA labels
+keyboard navigation
+focus states
+proper button/link semantics
+screen-reader labels
+alt text
+reduced motion
+accessible dropdowns
+accessible dialogs
+
+Horizontal rails must be keyboard navigable.
+
+Icon-only controls must have aria-label.
+
+==================================================
+PERFORMANCE
+==================================================
+
+Optimize:
+
+images
+server-side fetching
+caching
+code splitting
+lazy loading
+prefetching
+database queries
+
+Use:
+
+next/image
+
+where appropriate.
+
+Do not load every homepage section client-side.
+
+Prefer server-rendered content for TMDB discovery sections.
+
+Use client components only for:
+
+carousels
+filters
+favorites
+watch progress
+lists
+interactive controls
+
+==================================================
+SEO
+==================================================
+
+Generate metadata for:
+
+Home
+Movie detail
+TV detail
+Genre
+Provider
+Search
+
+Movie detail:
+
+title
+description
+poster
+backdrop
+canonical URL
+
+TV detail:
+
+title
+description
+poster
+backdrop
+
+Use structured metadata where appropriate.
+
+==================================================
+HOME DATA PIPELINE
+==================================================
+
+The homepage should be assembled from TMDB data.
+
+Suggested sections:
+
+Hero:
+trending/popular selection
+
+Trending Movies:
+trending movie
+
+Trending Series:
+trending TV
+
+Popular Movies:
+popular movies
+
+Popular TV:
+popular TV
+
+Top Rated Movies:
+top rated
+
+Top Rated TV:
+top rated
+
+Genre collections:
+discover endpoints
+
+Provider sections:
+watch providers
+
+Recommendations:
+contextual where possible
+
+Do not hard-code movie titles.
+
+The UI should update automatically as TMDB data changes.
+
+==================================================
+HERO SELECTION LOGIC
+==================================================
+
+Create a deterministic hero selection system.
+
+Prefer:
+
+1. trending content
+2. popular content
+3. content with backdrop
+4. content with poster
+5. valid title/description
+
+Filter out items without sufficient imagery.
+
+Hero carousel should have multiple items.
+
+Use:
+
+autoplay
+
+but pause on:
+
+hover
+focus
+interaction
+
+Provide:
+
+previous
+next
+slide indicators
+
+==================================================
+CONTENT NORMALIZATION
+==================================================
+
+TMDB movie and TV objects have different structures.
+
+Create a normalized Media type:
+
+type Media = {
+  id: number
+  type: "movie" | "tv"
+  title: string
+  overview: string
+  posterPath: string | null
+  backdropPath: string | null
+  releaseDate: string | null
+  rating: number
+  voteCount: number
+  genres: Genre[]
+}
+
+Normalize all TMDB responses before passing them to UI components.
+
+This allows one reusable MediaCard.
+
+==================================================
+NO DATA FABRICATION
+==================================================
+
+Never invent:
+
+ratings
+cast
+runtime
+budget
+revenue
+trailers
+episodes
+providers
+release dates
+
+If TMDB doesn't return a value:
+
+hide the field.
+
+Do not show fake values.
+
+==================================================
+CONTENT DENSITY
+==================================================
+
+The UI should feel content-rich.
+
+Do not create excessive whitespace between cards.
+
+However:
+
+major page sections need enough vertical separation.
+
+Use approximately:
+
+32–56px between standard sections
+
+48–80px around major editorial sections
+
+==================================================
+VISUAL DETAILS
+==================================================
+
+Cards:
+
+- medium radius
+- dark border
+- no thick outlines
+- subtle shadows
+- crisp images
+
+Buttons:
+
+Primary:
+bright/light surface
+
+Secondary:
+dark transparent surface
+
+Filters:
+dark pill
+
+Active:
+light or accent-filled pill
+
+Navigation:
+dark floating pill with active light pill
+
+Do not make every button green.
+
+==================================================
+DETAIL PAGE VISUAL PRIORITY
+==================================================
+
+Priority:
+
+1. artwork
+2. title
+3. play action
+4. metadata
+5. description
+6. ratings
+7. cast/episodes
+8. trailers
+9. recommendations
+
+Do not overload the hero.
+
+==================================================
+SERIES DETAIL VISUAL PRIORITY
+==================================================
+
+Priority:
+
+1. artwork
+2. title
+3. play
+4. metadata
+5. description
+6. episodes
+7. cast
+8. recommendations
+
+Episodes are the primary discovery component after the hero.
+
+==================================================
+PAGE-SPECIFIC FOOTER POSITION
+==================================================
+
+Footer should naturally follow page content.
+
+For short pages such as:
+
+History
+My Lists
+Search empty state
+
+keep footer visually anchored toward the lower viewport without creating unnecessary giant gaps.
+
+==================================================
+QUALITY REQUIREMENTS
+==================================================
+
+The implementation must satisfy all of the following:
+
+1. No horizontal page overflow.
+2. No layout shifts when images load.
+3. No broken TMDB image URLs.
+4. No exposed TMDB credentials.
+5. No duplicated API logic.
+6. No fake metadata.
+7. No fake loading states.
+8. No broken navigation.
+9. No dead buttons.
+10. All filters must work.
+11. Search must work.
+12. Movie details must work.
+13. TV details must work.
+14. Episodes must work.
+15. History must persist.
+16. Lists must persist.
+17. Favorites must persist.
+18. Watch progress must persist.
+19. Authentication must protect private data.
+20. Desktop must match the supplied visual structure.
+21. Tablet must remain usable.
+22. Mobile must be intentionally designed.
+23. Keyboard navigation must work.
+24. Loading/error/empty states must exist.
+25. TMDB attribution must be implemented correctly.
+26. API requests must be cached appropriately.
+27. Database queries must be indexed.
+28. Server secrets must never reach the client.
+29. Components must remain reusable.
+30. No unnecessary API/backend rewrites.
+31. No hard-coded content replacing API data.
+32. No excessive client-side rendering.
+33. No excessive animation.
+34. No inaccessible icon buttons.
+35. No inconsistent card sizes.
+36. No inconsistent spacing.
+37. No inconsistent navigation between pages.
+
+==================================================
+FINAL IMPLEMENTATION RULE
+==================================================
+
+Build the application as a cohesive product, not as disconnected pages.
+
+The following must share the same component system:
+
+Navigation
+Buttons
+Media cards
+Poster grids
+Media rails
+Section headers
+Filters
+Dropdowns
+Rating badges
+Metadata
+Cast cards
+Episode cards
+Feature cards
+Empty states
+Error states
+Loading skeletons
+Footer
+
+Every page should feel like it belongs to the same application.
+
+The final visual result should be:
+
+CINEMATIC
+MINIMAL
+DARK
+EDITORIAL
+CONTENT-FIRST
+PREMIUM
+FAST
+RESPONSIVE
+CONSISTENT
+
+The reference screenshots are the visual target for the overall UI structure and interaction patterns.
+
+Do not copy the reference site's branding or proprietary identity.
+
+Use TMDB for all movie/TV metadata and imagery.
+
+Use real API data throughout the application.
+
+Do not create placeholder movie data once TMDB integration is implemented.
+
+Before considering the project complete:
+
+1. Run TypeScript validation.
+2. Run ESLint.
+3. Run production build.
+4. Test all API routes.
+5. Test authentication.
+6. Test database persistence.
+7. Test desktop.
+8. Test tablet.
+9. Test mobile.
+10. Test search.
+11. Test movie detail.
+12. Test TV detail.
+13. Test season/episode navigation.
+14. Test history.
+15. Test lists.
+16. Test favorites.
+17. Test watch progress.
+18. Test filters.
+19. Test empty/error/loading states.
+20. Verify there is zero horizontal page overflow.
