@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     };
 
     // 1. Serve from the 48h cache when possible.
-    const cached = getCachedStreams(key.mediaType, key.mediaId, key.seasonEpisode);
+    const cached = await getCachedStreams(key.mediaType, key.mediaId, key.seasonEpisode);
     if (cached) {
       return jsonOk({
         cached: true,
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       episode: episode ?? undefined,
       maxResults,
     });
-    setCachedStreams(key.mediaType, key.mediaId, key.seasonEpisode, raw);
+    await setCachedStreams(key.mediaType, key.mediaId, key.seasonEpisode, raw);
 
     return jsonOk({
       cached: false,

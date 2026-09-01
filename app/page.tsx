@@ -24,11 +24,11 @@ export const revalidate = 1800;
 export default async function HomePage() {
   const [trending, popularMovies, popularTV, topRatedMovies, topRatedTV, providers, genreLists, animePopMovies, animePopTV, animeTopMovies, animeTopTV] =
     await Promise.all([
-      getTrendingMedia("week", 20),
-      getPopularMovies(1),
-      getPopularTV(1),
-      getTopRatedMovies(1),
-      getTopRatedTV(1),
+      getTrendingMedia("week", 20).catch(() => []),
+      getPopularMovies(1).catch(() => []),
+      getPopularTV(1).catch(() => []),
+      getTopRatedMovies(1).catch(() => []),
+      getTopRatedTV(1).catch(() => []),
       getProviders("US").catch(() => []),
       getAllGenres().catch(() => ({ movie: [], tv: [] })),
       discoverMovies({ keywords: [ANIME_KEYWORD], sortBy: "popularity.desc", page: 1 }).catch(
